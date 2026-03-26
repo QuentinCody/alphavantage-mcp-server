@@ -10,7 +10,7 @@ interface CodeModeEnv {
     ALPHAVANTAGE_API_KEY?: string;
 }
 
-export function registerCodeMode(server: McpServer, env: CodeModeEnv) {
+export function registerCodeMode(server: McpServer, env: CodeModeEnv): void {
     if (env.ALPHAVANTAGE_API_KEY) {
         setAvApiKey(env.ALPHAVANTAGE_API_KEY);
     }

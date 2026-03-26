@@ -6,7 +6,7 @@ interface SchemaEnv {
     AV_DATA_DO?: unknown;
 }
 
-export function registerGetSchema(server: McpServer, env?: SchemaEnv) {
+export function registerGetSchema(server: McpServer, env?: SchemaEnv): void {
     const handler = createGetSchemaHandler("AV_DATA_DO", "av");
 
     server.registerTool(

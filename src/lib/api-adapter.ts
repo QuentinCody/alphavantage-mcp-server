@@ -47,7 +47,7 @@ const PATH_TO_FUNCTION: Record<string, string> = {
 
 let envApiKey: string | undefined;
 
-export function setAvApiKey(key: string | undefined) {
+export function setAvApiKey(key: string | undefined): void {
     envApiKey = key;
 }
 
