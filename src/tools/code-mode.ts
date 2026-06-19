@@ -25,6 +25,8 @@ export function registerCodeMode(server: McpServer, env: CodeModeEnv): void {
 
     const executeTool = createExecuteTool({
         prefix: "av",
+        // Verifiable provenance: av_execute results carry a _meta.citation.
+        source: { id: "av", name: "Alpha Vantage", url: "https://www.alphavantage.co" },
         catalog: avCatalog,
         apiFetch,
         doNamespace: env.AV_DATA_DO,
