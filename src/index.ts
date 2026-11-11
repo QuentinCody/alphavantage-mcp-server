@@ -38,6 +38,8 @@ export default {
             return buildHealthResponse("alphavantage");
         }
 
+        if (url.pathname === "/readyz") return MyMCP.readiness(env, "alphavantage");
+
         if (url.pathname === "/mcp") {
             return MyMCP.serve("/mcp").fetch(request, env, ctx);
         }

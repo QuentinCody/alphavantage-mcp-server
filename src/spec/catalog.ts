@@ -1,21 +1,27 @@
 import type { ApiCatalog } from "@bio-mcp/shared/codemode/catalog";
 
+import { intelligenceEndpoints, intelligenceWorkflows } from "./intelligence";
+
 export const avCatalog: ApiCatalog = {
     name: "Alpha Vantage",
     baseUrl: "https://www.alphavantage.co",
     version: "1.0",
     auth: "required",
-    endpointCount: 30,
+    endpointCount: 38,
     notes:
         "- All endpoints use the same base: /query?function=X&apikey=KEY\n" +
         "- Code Mode virtual paths: /daily, /weekly, /monthly, /quote, /overview, etc.\n" +
         "- Time series: outputsize=compact (100 points) or full (20 years). Default: compact\n" +
-        "- Free tier: 25 req/day, 5 req/min. Use demo key for testing\n" +
+        "- Configure ALPHAVANTAGE_API_KEY in the Worker. Access/quotas depend on subscription; HTTP 200 notices and artificial demo data are errors, not usable observations.\n" +
         "- Intraday intervals: 1min, 5min, 15min, 30min, 60min\n" +
         "- Technical indicators require: symbol, interval, time_period, series_type params\n" +
         "- Economic data and commodities return {data: [{date, value}]} arrays\n" +
+        "- Intelligence results retain original JSON in _mcp.provenance.raw_json. Staged av_records rows include mcp_source_index, mcp_source_collection and mcp_native_json; use JSON extraction for nested fields. Unknown envelopes use one source record, not inferred holdings.\n" +
+        "- All source handles retain conservative coverage. Full MCP envelopes and large SQL results stage above 30 KiB; payloads retains the complete response.\n" +
         "- Error responses: {\"Note\": \"...\"} for rate limit, {\"Error Message\": \"...\"} for bad params",
+    workflows: intelligenceWorkflows,
     endpoints: [
+        ...intelligenceEndpoints,
         // --- Stock Prices ---
         {
             method: "GET",
@@ -59,7 +65,7 @@ export const avCatalog: ApiCatalog = {
         {
             method: "GET",
             path: "/quote",
-            summary: "Real-time quote: price, volume, change, change percent, latest trading day",
+            summary: "Quote snapshot: price, volume, change and latest trading day; freshness depends on entitlement and provider timestamp",
             category: "stock_prices",
             queryParams: [
                 { name: "symbol", type: "string", required: true, description: "Stock ticker" },

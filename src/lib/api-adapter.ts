@@ -1,4 +1,5 @@
 import type { ApiFetchFn } from "@bio-mcp/shared/codemode/catalog";
+import { intelligenceFunctions, intelligenceParams, inspectIntelligence, fail } from "./intelligence";
 import { avFetch } from "./http";
 
 // Map virtual path prefixes to AV function names
@@ -45,53 +46,19 @@ const PATH_TO_FUNCTION: Record<string, string> = {
     "/coffee": "COFFEE",
 };
 
-let envApiKey: string | undefined;
-
-export function setAvApiKey(key: string | undefined): void {
-    envApiKey = key;
-}
-
-export function createAvApiFetch(): ApiFetchFn {
-    return async (request) => {
-        const params = { ...(request.params as Record<string, unknown> || {}) };
-
-        // Check if path directly maps to a known function
-        const functionName = PATH_TO_FUNCTION[request.path];
-
-        if (functionName) {
-            // Use the mapped function name
-            const response = await avFetch(functionName, params, { apiKey: envApiKey });
-            if (!response.ok) {
-                const errorBody = await response.text().catch(() => response.statusText);
-                const error = new Error(`HTTP ${response.status}: ${errorBody.slice(0, 200)}`) as Error & {
-                    status: number;
-                    data: unknown;
-                };
-                error.status = response.status;
-                error.data = errorBody;
-                throw error;
-            }
-            const data = await response.json();
-            return { status: response.status, data };
-        }
-
-        // If path is /raw or no mapping, use function param directly
-        const fn = (params.function as string) || "GLOBAL_QUOTE";
+export function createAvApiFetch(apiKey?: string): ApiFetchFn {
+    return async request => {
+        if (request.method !== "GET" || request.body !== undefined) fail("Alpha Vantage supports GET reads");
+        const params = {...request.params};
+        const mapped = intelligenceFunctions[request.path] ?? PATH_TO_FUNCTION[request.path];
+        const fn = mapped ?? (request.path === "/raw" ? params.function : undefined);
+        if (typeof fn !== "string" || !/^[A-Z0-9_]+$/.test(fn)) fail("Unknown path; use a catalog route or /raw with an explicit function");
+        if (mapped && params.function !== undefined) fail("Mapped function cannot be overridden");
         delete params.function;
-
-        const response = await avFetch(fn, params, { apiKey: envApiKey });
-        if (!response.ok) {
-            const errorBody = await response.text().catch(() => response.statusText);
-            const error = new Error(`HTTP ${response.status}: ${errorBody.slice(0, 200)}`) as Error & {
-                status: number;
-                data: unknown;
-            };
-            error.status = response.status;
-            error.data = errorBody;
-            throw error;
-        }
-
-        const data = await response.json();
-        return { status: response.status, data };
+        const validated = intelligenceParams(fn, params);
+        const result = await avFetch(fn, validated, {apiKey});
+        const context = inspectIntelligence(fn, result.data, validated);
+        return {status: result.status, ...(context ? {completeness: context.completeness, upstreamTotal: null} : {}),
+            data: context ? {...result.data, _mcp: {...context, provenance: result.provenance}} : result.data};
     };
 }
